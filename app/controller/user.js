@@ -4,13 +4,13 @@ const model = require('../model');
 const userServices = require('../services/user');
 const mongoose = require('mongoose');
 const { ObjectId } = mongoose.Types;
-const moment = require('moment-timezone');
 
 exports.createUser = async (req, res) => {
   try {
     const { User } = model;
     const { email, firstName, lastName, age, designation, city } = req.body;
     const details = {
+      email,
       firstName,
       lastName,
       age,
@@ -25,104 +25,89 @@ exports.createUser = async (req, res) => {
     if (!creatUser) {
       return response.error(req, res, { msgCode: 'CREATE_ERROR' }, httpStatus.FORBIDDEN);
     }
-    return response.success(req, res, { msgCode: 'USER_ADDED', result: creatUser }, httpStatus.OK);
+    return response.success(req, res, { msgCode: 'USER_ADDED', data: creatUser }, httpStatus.OK);
   } catch (error) {
     console.log(error);
     return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
   }
 };
 
-exports.editProfile = async (req, res) => {
+exports.updateUser = async (req, res) => {
   try {
     const { User } = model;
-    const { userName, email, profilePic, gender, state, dob } = req.body;
-    const { userId } = req.data;
-    if (email) {
-      const checkUser = await commonService.getByCondition(User, { _id: { $ne: userId }, email, isDeleted: false }, { _id: 0, email: 1 });
-      if (checkUser) return response.error(req, res, { msgCode: 'PROFILE_ALREADY_EXISTS' }, httpStatus.CONFLICT);
+    const { email, firstName, lastName, age, designation, city } = req.body;
+    const { userId } = req.body;
+
+    const userCondition = { _id: userId };
+    const userDetails = await userServices.getByCondition(User, userCondition);
+    if (!userDetails) {
+      return response.error(req, res, { msgCode: 'NOT_FOUND' }, httpStatus.CONFLICT);
     }
-    const userDetails = await commonService.getByCondition(User, { _id: userId }, { _id: 0, email: 1 });
-    const details = { userName, email, dob, profilePic, gender, state };
-    if (userDetails.email !== email) details.isEmailVerified = false;
-    const updateProfile = await commonService.updateByCondition(User, { _id: userId }, details);
-    if (!updateProfile) return response.error(req, res, { msgCode: 'UPDATE_ERROR' }, httpStatus.FORBIDDEN);
-    const resData = {
-      id: updateProfile._id,
-      userName: updateProfile.userName || '',
-      phoneNumber: updateProfile.phoneNumber,
-      email: updateProfile.email || '',
-      dob: updateProfile.dob || '',
-      profilePic: updateProfile.profilePic || '',
-      gender: updateProfile.gender || '',
-      state: updateProfile.state || '',
-      totalCoins: updateProfile.totalCoins || 0,
-      createdAt: updateProfile.createdAt
+    const details = {
+      email,
+      firstName,
+      lastName,
+      age,
+      designation,
+      city
     };
-    return response.success(req, res, { msgCode: 'PROFILE_UPDATED', data: resData }, httpStatus.OK);
+    const updateUser = await userServices.updateByCondition(User, { _id: userId }, details);
+    if (!updateUser) return response.error(req, res, { msgCode: 'UPDATE_ERROR' }, httpStatus.FORBIDDEN);
+
+    return response.success(req, res, { msgCode: 'USER_UPDATED', data: updateUser }, httpStatus.OK);
   } catch (error) {
     console.log(error);
     return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
   }
 };
 
-exports.myProfile = async (req, res) => {
+exports.getUserById = async (req, res) => {
   try {
     const { User } = model;
-    const { userId } = req.data;
-    const project = {
-      _id: 1,
-      userName: 1,
-      phoneNumber: 1,
-      email: 1,
-      dob: 1,
-      profilePic: 1,
-      gender: 1,
-      state: 1,
-      totalCoins: 1,
-      createdAt: 1
-    };
-    const myProfile = await commonService.getUserProfile(User, { _id: userId }, project);
-    if (!myProfile) {
-      return response.error(req, res, { msgCode: 'FAILED_TO_UPDATE' }, httpStatus.FORBIDDEN);
+    const { userId } = req.query;
+
+    const userCondition = { _id: userId };
+    const userData = await userServices.getAll(User, userCondition);
+    if (!userData) {
+      return response.error(req, res, { msgCode: 'NOT_FOUND' }, httpStatus.FORBIDDEN);
     }
-    const resData = {
-      id: myProfile._id,
-      userName: myProfile.userName || '',
-      phoneNumber: myProfile.phoneNumber,
-      email: myProfile.email || '',
-      dob: myProfile.dob || '',
-      profilePic: myProfile.profilePic || '',
-      gender: myProfile.gender || '',
-      state: myProfile.state || '',
-      totalCoins: myProfile.totalCoins || 0,
-      createdAt: myProfile.createdAt
-    };
-    const msgCode = 'USER_PROFILE';
-    return response.success(req, res, { msgCode, data: resData }, httpStatus.OK);
+    const msgCode = 'FOUND';
+    return response.success(req, res, { msgCode, data: userData }, httpStatus.OK);
   } catch (error) {
     console.log(error);
     return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
   }
 };
 
-exports.skipProfile = async (req, res) => {
+exports.getAllUsers = async (req, res) => {
   try {
-    const { isSkip } = req.body;
     const { User } = model;
-    const { userId } = req.data;
-    if (isSkip === true || isSkip === 'true') {
-      const checkSkip = await commonService.getByCondition(User, { _id: userId });
-      if (checkSkip.isSkip === true) {
-        return response.error(req, res, { msgCode: 'ALREADY_SKIPPED' }, httpStatus.FORBIDDEN);
-      }
-      const skipData = await commonService.updateByCondition(User, { _id: userId }, { isSkip: true });
-      if (!skipData) {
-        return response.error(req, res, { msgCode: 'NOT_SKIPPED' }, httpStatus.FORBIDDEN);
-      }
-      return response.success(req, res, { msgCode: 'SKIPPED', data: {} }, httpStatus.OK);
+    const userData = await userServices.getAll(User);
+    if (!userData) {
+      return response.error(req, res, { msgCode: 'NOT_FOUND' }, httpStatus.FORBIDDEN);
     }
-  } catch (err) {
-    console.log(err);
+    const msgCode = 'FOUND';
+    return response.success(req, res, { msgCode, data: userData }, httpStatus.OK);
+  } catch (error) {
+    console.log(error);
+    return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { User } = model;
+    const { userId } = req.body;
+
+    const userCondition = { _id: new ObjectId(userId)};
+    const userData = await userServices.removeById(User, userCondition);
+    if (!userData) {
+      return response.error(req, res, { msgCode: 'NOT_FOUND' }, httpStatus.FORBIDDEN);
+    }
+    const msgCode = 'FOUND';
+    return response.success(req, res, { msgCode, data: {} }, httpStatus.OK);
+  } catch (error) {
+    console.log(error);
     return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
   }
 };

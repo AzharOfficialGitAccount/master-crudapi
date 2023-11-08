@@ -37,7 +37,7 @@ const getAll = async (Model, condition, project) => {
 
 const removeById = async (Model, id) => {
   try {
-    const data = await Model.findByIdAndRemove(id);
+    const data = await Model.findByIdAndDelete(id);
     return data;
   } catch (error) {
     return false;
