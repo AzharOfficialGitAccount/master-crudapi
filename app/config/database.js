@@ -8,10 +8,7 @@ function createConnection(mongoUri) {
     if (connections[mongoUri]) {
         return connections[mongoUri];
     }
-    const connection = mongoose.createConnection(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    });
+    const connection = mongoose.createConnection(mongoUri);
     connection.on('connected', () => {
         console.log('Database connection establish successfully"');
     });
