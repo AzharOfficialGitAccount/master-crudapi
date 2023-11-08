@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat App</title>
+    <style>
+        #chat-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        #message-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        #message-container input {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        #message-container button {
+            width: 100%;
+            max-width: 300px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        #message-container button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <ul id="chat"></ul>
+    </div>
+    <div id="message-container">
+        <input type="text" id="sender" placeholder="Sender" style="margin-bottom: 10px;">
+        <input type="text" id="receiver" placeholder="Receiver" style="margin-bottom: 10px;">
+        <input type="text" id="message" placeholder="Message" style="margin-bottom: 10px;">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script>
+        const socket = io.connect('http://localhost:2023');
+
+        socket.on('chat', (data) => {
+            const chatList = document.getElementById('chat');
+            const messageItem = document.createElement('li');
+            messageItem.textContent = `${data.sender}: ${data.message}`;
+            chatList.appendChild(messageItem);
+        });
+
+        function sendMessage() {
+            const senderInput = document.getElementById('sender');
+            const receiverInput = document.getElementById('receiver');
+            const messageInput = document.getElementById('message');
+
+            const sender = senderInput.value;
+            const receiver = receiverInput.value;
+            const message = messageInput.value;
+
+            if (!sender || !receiver || !message) {
+                alert('Please fill in all the fields.');
+                return;
+            }
+
+            socket.emit('chat', { sender, receiver, message });
+            messageInput.value = '';
+        }
+    </script>
+</body>
+
+</html>

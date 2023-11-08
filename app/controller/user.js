@@ -3,7 +3,10 @@ const httpStatus = require('http-status');
 const model = require('../model');
 const userServices = require('../services/user');
 const mongoose = require('mongoose');
+const ExcelJS = require('exceljs');
+const Chat = require('../model/chat');
 const { ObjectId } = mongoose.Types;
+const fs = require('fs');
 
 exports.createUser = async (req, res) => {
   try {
@@ -99,7 +102,7 @@ exports.deleteUser = async (req, res) => {
     const { User } = model;
     const { userId } = req.body;
 
-    const userCondition = { _id: new ObjectId(userId)};
+    const userCondition = { _id: new ObjectId(userId) };
     const userData = await userServices.removeById(User, userCondition);
     if (!userData) {
       return response.error(req, res, { msgCode: 'NOT_FOUND' }, httpStatus.FORBIDDEN);
@@ -111,3 +114,30 @@ exports.deleteUser = async (req, res) => {
     return response.error(req, res, { msgCode: 'SOMETHING_WRONG' }, httpStatus.SOMETHING_WRONG);
   }
 };
+
+
+exports.exportChatToExcel = async (req, res) => {
+  try {
+    const chatData = await Chat.find({});
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Chat Data');
+
+    worksheet.columns = [
+      { header: 'Sender', key: 'sender', width: 15 },
+      { header: 'Receiver', key: 'receiver', width: 15 },
+      { header: 'Message', key: 'message', width: 30 },
+    ];
+
+    worksheet.addRows(chatData);
+    const filename = `chat-export-${Date.now()}.xlsx`;
+    await workbook.xlsx.writeFile(filename);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    const fileStream = fs.createReadStream(filename);
+    fileStream.pipe(res);
+  } catch (error) {
+    res.status(500).json({ error: 'Error exporting chat data to Excel' });
+  }
+}

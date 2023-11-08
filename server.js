@@ -4,6 +4,9 @@ const http = require('http');
 const { connections } = require('./app/config/database');
 const { errorHandler } = require('./app/middleware');
 
+const socketIo = require('socket.io');
+const Chat = require('./app/model/chat');
+
 const cors = require('cors');
 require('dotenv').config();
 
@@ -40,6 +43,39 @@ const httpServer = http
   .listen(process.env.PORT, () => {
     console.info(`Server up successfully - port: ${process.env.PORT}`);
   });
+
+const io = socketIo(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('chat', async (data) => {
+    try {
+      const chat = new Chat({
+        sender: data.sender,
+        receiver: data.receiver,
+        message: data.message,
+        isDeleted: false,
+      });
+
+      const savedChat = await chat.save();
+
+      io.emit('chat', savedChat);
+    } catch (err) {
+      console.error('Error saving chat:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 
 process.on('unhandledRejection', (err) => {
   console.error('possibly unhandled rejection happened');

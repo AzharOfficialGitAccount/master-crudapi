@@ -10,6 +10,7 @@ router.get('/single-user', reqValidator(schema.getUserById, 'query'), controller
 router.put('/update-user', reqValidator(schema.updateUser), controller.updateUser);
 router.delete('/delete-user', reqValidator(schema.deleteUser), controller.deleteUser);
 router.get('/all-users', controller.getAllUsers);
+router.get('/export-chat-to-excel', controller.exportChatToExcel);
 
 // =========================================END SECTION ==========================================
 
